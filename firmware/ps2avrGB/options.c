@@ -25,14 +25,23 @@ void setOptions(uint8_t *data)
     {
         setDebounceValue(*(data+2));
     }
+    else if(*(data+1) == OPTION_INDEX_LED_OFF_DEFAULT)
+    {
+        setLedOffEnable(*(data+2));
+    }
 }
 
 void getOptions(option_info_t *buffer)
 {
     getLedOptions(buffer);
 
-    buffer->esctotilde = isEscTilde();
-    buffer->fnled = getBeyondFnLed();
+    // ver 1.5
+    // defalut off all = 0xFF, 0=on, 1=off
+    bool ledOffOption = getToggleOption(EEPROM_ENABLED_OPTION, TOGGLE_LED_OFF_DEFAULT); // true/false 주의, true 일 때 led 가 꺼진 상태;
+    buffer->enableoption = ~(
+            0x00 | ((isEscTilde() ? 1: 0) << TOGGLE_ESC_TO_TILDE)
+             | ((ledOffOption ? 1: 0) << TOGGLE_LED_OFF_DEFAULT)
+        ); 
 
     // Ver 1.2
     buffer->version[0] = VERSION_MAJOR;

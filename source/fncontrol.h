@@ -19,7 +19,7 @@
 #define BEYOND_FN_LED_SL	2
 
 void initBeyondFn(void);
-uint8_t getBeyondFnLed(void);
+//uint8_t getBeyondFnLed(void);
 
 bool isDownExtraFn(void);
 
@@ -39,5 +39,11 @@ void enterFrameForFnControl(void);
 
 //firmware에 따라 별도로 처리할 부분 처리;
 extern bool delegateFnControl(uint8_t xKeyidx, bool xIsExtraFnDown);
+
+/*
+ LED on/off 기능 활성 확인
+ */
+bool isLedOff(void);    // 현재 LED OFF 상태인지 확인
+void setLedOffEnable(bool xIsEnable); // BM 에서 부팅 시 초기값 지정
 
 #endif

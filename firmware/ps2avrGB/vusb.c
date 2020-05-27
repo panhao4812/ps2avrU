@@ -337,6 +337,14 @@ usbMsgLen_t usbFunctionSetup(uint8_t data[8]) {
             		readyForNext = NEXT_RAINBOW;
             	}else if(rq->wLength.word >= OPTION_GET_REPORT_LENGTH_QUICK_MACRO1 && rq->wLength.word <= OPTION_GET_REPORT_LENGTH_QUICK_MACRO12){
             	    readyForNext = rq->wLength.word;
+
+            	/*
+                    이전 eeprom keymap 영역을 매크로 영역으로 확장하여 사용한다.
+                    기존 매크로에 28byte 씩 개별 매크로마다 추가한다.
+                    - 데이터는 4묶음씩 전달된다, 0~3, 4~7, 8~11
+                */  
+                }else if(rq->wLength.word >= OPTION_GET_REPORT_LENGTH_QUICK_MACRO_EXTRA1 && rq->wLength.word <= OPTION_GET_REPORT_LENGTH_QUICK_MACRO_EXTRA12){
+            	    readyForNext = rq->wLength.word;
             	}
 
 
@@ -383,6 +391,15 @@ usbMsgLen_t usbFunctionSetup(uint8_t data[8]) {
                     usbMsgPtr = (usbMsgPtr_t)(EEPROM_MACRO+(MACRO_SIZE_MAX * (rq->wLength.word - OPTION_GET_REPORT_LENGTH_QUICK_MACRO1)));
                     return MACRO_SIZE_MAX;
 
+                /*
+                    이전 eeprom keymap 영역을 매크로 영역으로 확장하여 사용한다.
+                    기존 매크로에 28byte 씩 개별 매크로마다 추가한다.
+                */     
+                }else if(rq->wLength.word >= OPTION_GET_REPORT_LENGTH_QUICK_MACRO_EXTRA1 && rq->wLength.word <= OPTION_GET_REPORT_LENGTH_QUICK_MACRO_EXTRA12){
+                    usbMsgFlags = USB_FLG_USE_USER_RW;
+                    usbMsgPtr = (usbMsgPtr_t)(EEPROM_MACRO_EXTRA+(MACRO_EXTRA_SIZE_MAX * (rq->wLength.word - OPTION_GET_REPORT_LENGTH_QUICK_MACRO_EXTRA1)));
+                    return MACRO_EXTRA_SIZE_MAX;
+
             	}else {
             		return rq->wLength.word;
             	}
@@ -410,6 +427,12 @@ usbMsgLen_t usbFunctionSetup(uint8_t data[8]) {
                     IsAddressHead = true;
                     quickMacroAddress = EEPROM_MACRO + (MACRO_SIZE_MAX * (readyForNext - OPTION_GET_REPORT_LENGTH_QUICK_MACRO1));
                     expectReport = 5;
+                
+                }else if(readyForNext >= OPTION_GET_REPORT_LENGTH_QUICK_MACRO_EXTRA1 && readyForNext <= OPTION_GET_REPORT_LENGTH_QUICK_MACRO_EXTRA12){
+                    // write quick macro
+                    IsAddressHead = true;
+                    quickMacroAddress = EEPROM_MACRO_EXTRA + (MACRO_EXTRA_SIZE_MAX * (readyForNext - OPTION_GET_REPORT_LENGTH_QUICK_MACRO_EXTRA1));
+                    expectReport = 6;
                 }
                 readyForNext = 0;
 
@@ -457,17 +480,49 @@ void updateQuickMacro(uint8_t *data, uint8_t len)
         len += -2;
         data += 2;
     }
-    eeprom_update_block(data, (uint8_t *)quickMacroAddress, len);
-    quickMacroAddress += len;
 
-    /*uint8_t i;
-    for(i = 0; i< len; ++i)
+    // quick macro의 eeprom address 범위를 넘어서지 않도록 패치
+    if(quickMacroAddress >= (EEPROM_MACRO + MACRO_SIZE_MAX * MACRO_NUM))
     {
-        eeprom_update_byte((uint8_t *)quickMacroAddress, *data);
-        quickMacroAddress++;
-        data++;
-    }*/
+        return;
+
+    }
+    else if(quickMacroAddress + len > (EEPROM_MACRO + MACRO_SIZE_MAX * MACRO_NUM))
+    {
+        len = (EEPROM_MACRO + MACRO_SIZE_MAX * MACRO_NUM) - quickMacroAddress;
+    }
+
+    eeprom_update_block(data, (void *)quickMacroAddress, len);
+    quickMacroAddress += len;
 }
+
+/*
+todo updateQuickMacro 와 리팩토링 필요
+*/
+void updateQuickMacroExtra(uint8_t *data, uint8_t len)
+{
+    if(IsAddressHead)
+    {
+        IsAddressHead = false;
+        // 처음에는 인덱스와 ID를 제거해준다.
+        len += -2;
+        data += 2;
+    }
+
+    // quick macro의 eeprom address 범위를 넘어서지 않도록 패치
+    if(quickMacroAddress >= (EEPROM_MACRO_EXTRA + MACRO_EXTRA_SIZE_MAX * MACRO_NUM))
+    {
+        return;
+    }
+    else if(quickMacroAddress + len > (EEPROM_MACRO_EXTRA + MACRO_EXTRA_SIZE_MAX * MACRO_NUM))
+    {
+        len = (EEPROM_MACRO_EXTRA + MACRO_EXTRA_SIZE_MAX * MACRO_NUM) - quickMacroAddress;
+    }
+
+    eeprom_update_block(data, (void *)quickMacroAddress, len);
+    quickMacroAddress += len;
+}
+
 /*
  * EEPROM Quick macro reading
  */
@@ -510,8 +565,8 @@ uint8_t usbFunctionWrite(uchar *data, uchar len) {
         		eeprom_write_byte((uint8_t *)EEPROM_BOOTLOADER_START, 0x00);
         	}
         	delegateGotoBootloader();
-/* TODO
- * 이전 버전과 호환을 위해 남겨둠
+/*  
+  TODO 이전 버전과 호환을 위해 남겨둠
  */
 #ifdef ENABLE_BOOTMAPPER
         }else if(data[1] == OPTION_INDEX_BOOTMAPPER){
@@ -529,7 +584,10 @@ uint8_t usbFunctionWrite(uchar *data, uchar len) {
     	setOptions((uint8_t *)data);
     }else if (expectReport == 5){
         // write quick macro;
-        updateQuickMacro((uint8_t *)data, len);
+        updateQuickMacro((uint8_t *)data, len);    
+    }else if (expectReport == 6){
+        // write quick macro extra;
+        updateQuickMacroExtra((uint8_t *)data, len);
     }
 
     return 0x01;

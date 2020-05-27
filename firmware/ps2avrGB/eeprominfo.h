@@ -7,10 +7,11 @@
 
 // EEPROM_ENABLED_OPTION bit
 //#define TOGGLE_LAZY_FN		    0   //deprecated
-//#define TOGGLE_SMART_KEY        1 //deprecated
-#define TOGGLE_BEYOND_FN_LED_NL 2
+//#define TOGGLE_SMART_KEY        1     //deprecated
+// #define TOGGLE_BEYOND_FN_LED_NL 2    //deprecated
 #define TOGGLE_ESC_TO_TILDE	    3
-#define TOGGLE_BEYOND_FN_LED_SL 4
+// #define TOGGLE_BEYOND_FN_LED_SL 4    //deprecated
+#define TOGGLE_LED_OFF_DEFAULT   5   // power on 시 led on or off 결정 기본값 on(false), 이후 'LED on/off' 키로 토글
 
 // eeprom address
 #define EEPROM_BOOTLOADER_START	1	// 1byte
@@ -24,7 +25,8 @@
 #define EEPROM_LED_BRIGHTNESS 	9	// 1byte
 #define EEPROM_LED_MODE			11	// 1byte	0xF0 : led2, 0x0F : full led
 #define EEPROM_INTERFACE		12	// 1byte
-#define EEPROM_MAPPING			13	// 360byte ~372
+#define EEPROM_MACRO_EXTRA  	13	// 28 * 12 = 336byte ~349
+// 350~372 : 23byte
 #define EEPROM_LED2_COLOR_RAINBOW 373	// 21byte ~393
 #define EEPROM_LED2_COLOR_1		394	// 3byte
 #define EEPROM_LED2_COLOR_2		397	// 3byte
@@ -34,9 +36,10 @@
 #define EEPROM_NUMLOCK_LAYER    407	// 1byte
 #define EEPROM_USB_COMPATIBILITY    408	// 1byte
 #define EEPROM_DEBOUNCE_VALUE     409 // 1byte
-// 409~420 : 12bytes
+#define EEPROM_FNLOCK_LED       410 // 1byte    0xF0: FN2 lock, 0x0F: FN3 lock, default= 0x0F
+// 411~420 : 10bytes
 #define EEPROM_MACRO			421	// ~996
 #define EEPROM_LED2_COLOR_KEY1	997	// 3byte ~999
-// 1000~1024 : 25bytes
+// 1000~1023 : 24bytes
 
 #endif
